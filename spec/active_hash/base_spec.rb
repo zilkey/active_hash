@@ -629,6 +629,41 @@ describe ActiveHash, "Base" do
         country.name.should == "foobar"
       end
     end
+
+    context "for fields with type values" do
+
+      before do
+        Country.field :population, :type => 'Integer', :default => false
+      end
+
+      context "entered values will be converted to set type" do
+
+        it 'when pass to new' do
+          country = Country.new(:population => "500000")
+          country.population.should == 500000
+        end
+
+        it 'when pass to setter' do
+          country = Country.new
+          country.population = '500000'
+          country.population.should == 500000
+        end
+
+      end
+
+      context 'valid types, accepts Ruby types' do
+
+        before do
+          Country.field :independence_day, :type => 'Date', :default => false
+        end
+
+        it 'date' do
+          country = Country.new(:independence_day => "01/12/1934")
+          country.independence_day.class.should == Date
+        end
+      end
+
+    end
   end
 
   describe "interrogator methods" do
