@@ -20,13 +20,25 @@ describe ActiveYaml::Base do
     Object.send :remove_const, :ArrayRow
     Object.send :remove_const, :City
     Object.send :remove_const, :State
+    Object.send :remove_const, :User
     Object.send :remove_const, :Empty
   end
 
   describe ".load_path" do
-    it 'can execute embedded ruby' do
-       User.first.email.should =~ /^user[0-9]*@email.com$/
-       User.first.password.should == 'secret'
+    context 'default' do
+      it 'can execute embedded ruby' do
+        User.first.email.should =~ /^user[0-9]*@email.com$/
+        User.first.password.should == 'secret'
+      end
+    end
+
+    context 'erb disabled' do
+      before { ActiveYaml::Base.set_erb_disabled true }
+
+      it 'can return raw erb' do
+        expect(User.first.email).to eq '<%= "user#{rand(100)}@email.com" %>'
+        expect(User.first.password).to eq "<%= ENV['USER_PASSWORD'] %>"
+      end
     end
 
     it 'can load empty yaml' do

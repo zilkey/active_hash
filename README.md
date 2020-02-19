@@ -428,6 +428,12 @@ Embedded ruby can bu used in ActiveYaml using erb brackets `<% %>` and `<%= %>` 
   password: <%= ENV['USER_PASSWORD'] %>
 ```
 
+This can be disabled in an initializer:
+```ruby
+# config/initializers/active_yaml.rb
+ActiveYaml::Base.set_erb_disabled true
+```
+
 ## ActiveJSON
 
 If you want to store your data in JSON files, just inherit from ActiveJSON and specify your path information:
