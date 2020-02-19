@@ -35,7 +35,7 @@ describe ActiveYaml::Base do
     context 'erb disabled' do
       before { ActiveYaml::Base.set_erb_disabled true }
 
-      it 'can execute embedded ruby' do
+      it 'can return raw erb' do
         expect(User.first.email).to eq '<%= "user#{rand(100)}@email.com" %>'
         expect(User.first.password).to eq "<%= ENV['USER_PASSWORD'] %>"
       end
