@@ -67,7 +67,7 @@ module ActiveHash
     end
 
     if Object.const_defined?(:ActiveModel)
-      extend ActiveModel::Naming
+      extend ActiveModel::Translation
       include ActiveModel::Conversion
     else
       def to_param
