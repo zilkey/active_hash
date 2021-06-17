@@ -14,6 +14,14 @@ ActiveHash also ships with:
 
   * ActiveFile: a base class that you can use to create file data sources
   * ActiveYaml: a base class that will turn YAML into a hash and load the data into an ActiveHash object
+F
+## !!! Important notice !!!
+We have changed returned value to chainable by v3.0.0. It's not just an `Array` instance anymore.
+If it breaks your application, please report us on [issues](https://github.com/zilkey/active_hash/issues), and use v2.x.x as following..
+
+```ruby
+gem 'active_hash', '~> 2.3.0'
+```
 
 ## Installation
 
@@ -123,7 +131,7 @@ NOTE: auto-defined fields will _not_ override fields you've defined, either on t
 If some of your hash values contain nil, and you want to provide a default, you can specify defaults with the :field method:
 ```ruby
 class Country < ActiveHash::Base
-  field   :is_axis_of_evil, :default => false
+  field :is_axis_of_evil, :default => false
 end
 ```
 ## Defining Data
@@ -156,11 +164,13 @@ Country.find 1                 # => returns the first country object with that i
 Country.find [1,2]             # => returns all Country objects with ids in the array
 Country.find :all              # => same as .all
 Country.find :all, args        # => the second argument is totally ignored, but allows it to play nicely with AR
+Country.find { |country| country.name.start_with?('U') } # => returns the first country for which the block evaluates to true
 Country.find_by_id 1           # => find the first object that matches the id
 Country.find_by(name: 'US')    # => returns the first country object with specified argument
 Country.find_by!(name: 'US')   # => same as find_by, but raise exception when not found
 Country.where(name: 'US')      # => returns all records with name: 'US'
 Country.where.not(name: 'US')  # => returns all records without name: 'US'
+Country.order(name: :desc)     # => returns all records ordered by name attribute in DESC order
 ```
 It also gives you a few dynamic finder methods.  For example, if you defined :name as a field, you'd get:
 ```ruby
@@ -169,6 +179,14 @@ Country.find_all_by_name "foo"                # => returns an array of the objec
 Country.find_by_id_and_name 1, "Germany"      # => returns the first object matching that id and name
 Country.find_all_by_id_and_name 1, "Germany"  # => returns an array of objects matching that name and id
 ```
+
+Furthermore, it allows to create custom scope query methods, similar to how it's possible with ActiveRecord:
+
+```ruby
+Country.scope :english, -> { where(language: 'English') } # Creates a class method Country.english performing the given query
+Country.scope :with_language, ->(language) { where(language: language) } # Creates a class method Country.with_language(language) performing the given query
+```
+
 ## Instance Methods
 
 ActiveHash objects implement enough of the ActiveRecord api to satisfy most common needs.  For example:
@@ -190,16 +208,24 @@ Country#name=       # => sets the name
 ```
 ## Saving in-memory records
 
-The ActiveHash::Base.all method functions like an in-memory data store.  You can save your records to the the .all array by using standard ActiveRecord create and save methods:
+The ActiveHash::Base.all method functions like an in-memory data store. You can save your records as ActiveHash::Relation object by using standard ActiveRecord create and save methods:
 ```ruby
-Country.all             # => []
+Country.all
+=> #<ActiveHash::Relation:0x00007f861e043bb0 @klass=Country, @all_records=[], @query_hash={}, @records_dirty=false>
 Country.create
-Country.all             # [ <Country :id => 1> ]
+=> #<Country:0x00007f861b7abce8 @attributes={:id=>1}>
+Country.all
+=> #<ActiveHash::Relation:0x00007f861b7b3628 @klass=Country, @all_records=[#<Country:0x00007f861b7abce8 @attributes={:id=>1}>], @query_hash={}, @records_dirty=false>
 country = Country.new
-country.new_record?     # => true
+=> #<Country:0x00007f861e059938 @attributes={}>
+country.new_record?
+=> true
 country.save
-country.new_record?     # => false
-Country.all             # [ <Country :id => 1>, <Country :id => 2>  ]
+=> true
+country.new_record?
+# => false
+Country.all
+=> #<ActiveHash::Relation:0x00007f861e0ca610 @klass=Country, @all_records=[#<Country:0x00007f861b7abce8 @attributes={:id=>1}>, #<Country:0x00007f861e059938 @attributes={:id=>2}>], @query_hash={}, @records_dirty=false>
 ```
 Notice that when adding records to the collection, it will auto-increment the id for you by default.  If you use string ids, it will not auto-increment the id.  Available methods are:
 ```
@@ -323,7 +349,7 @@ end
 The above example will look for the file "/u/data/sample.yml".
 
 Since ActiveYaml just creates a hash from the YAML file, you will have all fields specified in YAML auto-defined for you.  You can format your YAML as an array, or as a hash:
-```
+```yaml
 # array style
 - id: 1
   name: US
@@ -356,7 +382,7 @@ end
 
 Aliases can be used in ActiveYaml using either array or hash style by including `ActiveYaml::Aliases`.
 With that module included, keys beginning with a '/' character can be safely added, and will be ignored, allowing you to add aliases anywhere in your code:
-```
+```yaml
 # Array Style
 - /aliases:
   soda_flavor: &soda_flavor
@@ -382,7 +408,8 @@ coke:
   name: Coke
   flavor: *soda_flavor
   price: *soda_price
-
+```
+```ruby
 class Soda < ActiveYaml::Base
   include ActiveYaml::Aliases
 end
@@ -394,9 +421,9 @@ Soda.first.price # => 1.0
 
 ### Using ERB ruby in YAML
 
-Embedded ruby can bu used in ActiveYaml using erb brackets `<% %>` and `<%= %>` to set the result of a ruby operation as a value in the yaml file.
+Embedded ruby can be used in ActiveYaml using erb brackets `<% %>` and `<%= %>` to set the result of a ruby operation as a value in the yaml file.
 
-```
+```yaml
 - id: 1
   email: <%= "user#{rand(100)}@email.com" %>
   password: <%= ENV['USER_PASSWORD'] %>
@@ -466,7 +493,7 @@ class Country < ActiveFile::Base
 
   class << self
     def extension
-      ".super_secret"
+      "super_secret"
     end
 
     def load_file

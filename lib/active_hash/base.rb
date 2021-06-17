@@ -1,6 +1,14 @@
 module ActiveHash
-
   class RecordNotFound < StandardError
+    attr_reader :model, :primary_key, :id
+
+    def initialize(message = nil, model = nil, primary_key = nil, id = nil)
+      @primary_key = primary_key
+      @model = model
+      @id = id
+
+      super(message)
+    end
   end
 
   class ReservedFieldError < StandardError
@@ -23,7 +31,7 @@ module ActiveHash
       end
 
       def not(options)
-        return @records if options.blank?
+        return @scope if options.blank?
 
         # use index if searching by id
         if options.key?(:id) || options.key?("id")
@@ -32,9 +40,11 @@ module ActiveHash
         end
         return candidates if options.blank?
 
-        (candidates || @records || []).reject do |record|
+        filtered_records = (candidates || @records || []).reject do |record|
           match_options?(record, options)
         end
+
+        ActiveHash::Relation.new(@scope.klass, filtered_records, {})
       end
 
       def match_options?(record, options)
@@ -182,66 +192,11 @@ module ActiveHash
         record
       end
 
-      def all(options={})
-        if options.has_key?(:conditions)
-          where(options[:conditions])
-        else
-          @records ||= []
-        end
+      def all(options = {})
+        ActiveHash::Relation.new(self, @records || [], options[:conditions] || {})
       end
 
-      def where(options = :chain)
-        if options == :chain
-          return WhereChain.new(self)
-        elsif options.blank?
-          return @records
-        end
-
-        # use index if searching by id
-        if options.key?(:id) || options.key?("id")
-          ids = (options.delete(:id) || options.delete("id"))
-          candidates = Array.wrap(ids).map { |id| find_by_id(id) }.compact
-        end
-        return candidates if options.blank?
-
-        (candidates || @records || []).select do |record|
-          match_options?(record, options)
-        end
-      end
-
-      def find_by(options)
-        where(options).first
-      end
-
-      def find_by!(options)
-        find_by(options) || (raise RecordNotFound.new("Couldn't find #{name}"))
-      end
-
-      def match_options?(record, options)
-        options.all? do |col, match|
-          if match.kind_of?(Array)
-            match.any? { |v| normalize(v) == normalize(record[col]) }
-          else
-            normalize(record[col]) == normalize(match)
-          end
-        end
-      end
-
-      private :match_options?
-
-      def normalize(v)
-        v.respond_to?(:to_sym) ? v.to_sym : v
-      end
-
-      private :normalize
-
-      def count
-        all.length
-      end
-
-      def pluck(*column_names)
-        column_names.map { |column_name| all.map(&column_name.to_sym) }.inject(&:zip)
-      end
+      delegate :where, :find, :find_by, :find_by!, :find_by_id, :count, :pluck, :pick, :first, :last, :order, to: :all
 
       def transaction
         yield
@@ -258,30 +213,6 @@ module ActiveHash
         reset_record_index
         @records = []
       end
-
-      def find(id, * args)
-        case id
-          when nil
-            nil
-          when :all
-            all
-          when :first
-            all(*args).first
-          when Array
-            id.map { |i| find(i) }
-          else
-            find_by_id(id) || begin
-              raise RecordNotFound.new("Couldn't find #{name} with ID=#{id}")
-            end
-        end
-      end
-
-      def find_by_id(id)
-        index = record_index[id.to_s]
-        index and @records[index]
-      end
-
-      delegate :first, :last, :to => :all
 
       def fields(*args)
         options = args.extract_options!
@@ -465,6 +396,16 @@ module ActiveHash
       end
 
       private :mark_clean
+
+      def scope(name, body)
+        raise ArgumentError, 'body needs to be callable' unless body.respond_to?(:call)
+
+        the_meta_class.instance_eval do
+          define_method(name) do |*args|
+            instance_exec(*args, &body)
+          end
+        end
+      end
 
     end
 

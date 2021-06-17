@@ -1,3 +1,20 @@
+2020-01-15 (v3.1.0)
+  - Add ActiveHash::Base.order method inspired by ActiveRecord [#177](https://github.com/zilkey/active_hash/pull/177)
+  - Add #to_ary to ActiveHash::Relation [#182](https://github.com/zilkey/active_hash/pull/182)
+  - Allow #find to behave like Enumerable#find if id is nil and a block is given [#183](https://github.com/zilkey/active_hash/pull/183)
+  - Delegate :sample to `records` [#189](https://github.com/zilkey/active_hash/pull/189)
+
+2019-09-28 (v3.0.0)
+  - Make #where chainable [#178](https://github.com/zilkey/active_hash/pull/178)
+
+2019-09-28 (v2.3.0)
+  - Add ::scope method (inspired by ActiveRecord) [#173](https://github.com/zilkey/active_hash/pull/173)
+  - Let `.find(nil)` raise ActiveHash::RecordNotFound (inspired by ActiveRecord) [#174](https://github.com/zilkey/active_hash/pull/174)
+  - `where` clause now works with range argument [#175](https://github.com/zilkey/active_hash/pull/175)
+
+2019-03-06 (v2.2.1)
+  - Allow empty YAML [#171](https://github.com/zilkey/active_hash/pull/171) Thanks, @ppworks
+
 2018-11-22 (v2.2.0)
   - Support pluck method [#164](https://github.com/zilkey/active_hash/pull/164) Thanks, @ihatov08
   - Support where.not method [#167](https://github.com/zilkey/active_hash/pull/167) Thanks, @DialBird
