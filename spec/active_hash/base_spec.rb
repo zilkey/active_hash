@@ -1549,7 +1549,6 @@ describe ActiveHash, "Base" do
     end
   end
 
-
   context 'in case of ActiveModel is defined' do
 
     before do
